@@ -1,0 +1,3 @@
+workercrm_site.egg-info/
+**/__pycache__/
+workercrm/settings.py
