@@ -1,6 +1,6 @@
 # [Worker CRM](https://github.com/aminbros/workercrm-site)
 A demo django site, Intended to provide service via it's api functions.
-You look at api definition at service/api.py
+You can look at api definition at service/api.py
 
 ## Requirements
 

@@ -1,4 +1,4 @@
-from ..models import Worker, ConfigData
+from ..models import Worker, Config, ConfigData
 from django.contrib.auth.models import User
 from ..apimod import ApiError, mk_readsingle_call, mk_readmulti_call
 from .configdata import configdataColumns, configdataRelatedKeys, \
@@ -19,12 +19,13 @@ _wcdColumn = ({
   'type': "onerel",
   'columns': configdataColumns
 },)
-getWorkers = mk_readmulti_call( \
-  lambda user, offset, limit, query: \
-    (workerColumns, \
-     Worker.objects.filter(owner=user)[offset:limit] \
-     if query == "" or query == None \
-     else Worker.objects.filter(owner=user, name__istartswith=query)))
+
+def _getWorkersFunc(user, offset, limit, query):
+  records = Worker.objects.filter(owner=user) \
+      if query == "" or query == None \
+      else Worker.objects.filter(owner=user, name__icontains=query)
+  return (workerColumns, records[offset:offset+limit], records.count())
+getWorkers = mk_readmulti_call(_getWorkersFunc)
 getWorker = mk_readsingle_call( \
   lambda user, id, with_baseconfig, with_configdata: \
     (workerColumns + (_wcdColumn if with_configdata else ()) + \
@@ -50,7 +51,6 @@ def createWorker(user, name, key, **kwargs):
                   baseconfig=baseconfig)
   worker.save()
   return {
-    "status": True,
     "id": worker.id
   }
 
@@ -85,7 +85,6 @@ def updateWorker(user, id, **kwargs):
       setattr(worker, strvalkey, kwargs[strvalkey])
   worker.save()
   return {
-    "status": True,
     "id": str(worker.id)
   }
 
@@ -94,5 +93,5 @@ def deleteWorker(user, id):
   configdata = worker.configdata
   worker.delete()
   gcCheckAConfigData(configdata)
-  return { "status": True }
+  return {}
 

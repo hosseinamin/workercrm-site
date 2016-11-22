@@ -5,7 +5,7 @@ from time import time
 import random
 import sys
 import json
-from .apimod import apiinit, evalargs, ApiError
+from .apimod import apiinit, evalargs, ApiError, mk_readsingle_call
 from .api_1_0.worker import updateWorker, createWorker, getWorker, getWorkers,\
   deleteWorker
 from .api_1_0.config import updateConfig, createConfig, getConfig, getConfigs,\
@@ -26,7 +26,6 @@ def login(username, password, expires):
               str(random.randint(0, sys.maxsize))).encode('UTF-8')
       signature = sign(data, start_time, expire_time)
       return {
-        "status": True,
         "token": token_new(data, start_time, expire_time, signature).decode('UTF-8')
       }
   except User.DoesNotExist:
@@ -36,7 +35,6 @@ def login(username, password, expires):
 def register(username, email, password):
   user = User.objects.create_user(username, email, password)
   return {
-    "status": True,
     "id": str(user.id)
   }
 
@@ -47,6 +45,9 @@ def registerValidateUser(v):
   except User.DoesNotExist:
     pass
 
+myInfoColumns = ['username','first_name','last_name','email']
+myInfo = mk_readsingle_call(lambda user: (myInfoColumns, user))
+
 email_pttrn = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
 def emailValidate(v):
   if email_pttrn.match(v) == None:
@@ -55,9 +56,9 @@ def emailValidate(v):
 apicalls = {
 '1.0': {
   # User apicalls 
-    'login': {
+  'login': {
+    'POST': {
       'function': login,
-      'method': 'GET',
       'args': [
         {
           'name': 'username',
@@ -71,15 +72,16 @@ apicalls = {
         },
         {
           'name': 'expires',
-          'default': 60 * 60,
+          'default': 60 * 60 * 24,
           'max': 60 * 60 * 24 * 30 * 3,
           'type': int
         }
       ]
-    },
-    'register': {
+    }
+  },
+  'register': {
+    'POST': {
       'function': register,
-      'method': 'POST',
       'args': [
         {
           'name': 'username',
@@ -99,11 +101,21 @@ apicalls = {
           'required': True
         }
       ]
-    },
-  # Worker apicalls
-    'getWorkers': {
-      'function': getWorkers,
+    }
+  },
+  'myInfo': {
+    'GET': {
+      'function': myInfo,
       'method': 'GET',
+      'args': [
+        { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
+      ]
+    }
+  },
+  # Worker apicalls
+  'workers': {
+    'GET': {
+      'function': getWorkers,
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -118,14 +130,16 @@ apicalls = {
         {
           'name': 'limit',
           'default': 10,
+          'min': 0,
           'max': 1000,
           'type': int
         }
       ]
-    },
-    'createWorker': {
+    }
+  },
+  'workerCreate': {
+    'POST': {
       'function': createWorker,
-      'method': 'POST',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -156,10 +170,11 @@ apicalls = {
           'type': str
         }
       ]
-    },
-    'updateWorker': {
+    }
+  },
+  'workerUpdate': {
+    'POST': {
       'function': updateWorker,
-      'method': 'POST',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -191,10 +206,11 @@ apicalls = {
           'type': str
         }
       ]
-    },
-    'getWorker': {
+    }
+  },
+  'worker': {
+    'GET': {
       'function': getWorker,
-      'method': 'GET',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -214,9 +230,8 @@ apicalls = {
         },
       ]
     },
-    'deleteWorker': {
+    'DELETE': {
       'function': deleteWorker,
-      'method': 'DELETE',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -226,10 +241,11 @@ apicalls = {
         },
       ]
     },
+  },
   # Config apicalls
-    'getConfigs': {
+  'configs': {
+    'GET': {
       'function': getConfigs,
-      'method': 'GET',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -244,12 +260,15 @@ apicalls = {
         {
           'name': 'limit',
           'default': 10,
+          'min': 0,
           'max': 1000,
           'type': int
         }
       ]
-    },
-    'createConfig': {
+    }
+  },
+  'configCreate': {
+    'POST': {
       'function': createConfig,
       'method': 'POST',
       'args': [
@@ -267,9 +286,10 @@ apicalls = {
         }
       ]
     },
-    'updateConfig': {
+  },
+  'configUpdate': {
+    'POST': {
       'function': updateConfig,
-      'method': 'POST',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -288,9 +308,10 @@ apicalls = {
         }
       ]
     },
-    'getConfig': {
+  },
+  'config': {
+    'GET': {
       'function': getConfig,
-      'method': 'GET',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -305,9 +326,8 @@ apicalls = {
         }
       ]
     },
-    'deleteConfig': {
+    'DELETE': {
       'function': deleteConfig,
-      'method': 'DELETE',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -317,10 +337,11 @@ apicalls = {
         },
       ]
     },
+  },
   # ConfigData apicalls
-    'createConfigData': {
+  'configDataCreate': {
+    'POST': {
       'function': createConfigData,
-      'method': 'POST',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -336,9 +357,10 @@ apicalls = {
         }
       ]
     },
-    'updateConfigData': {
+  },
+  'configDataUpdate': {
+    'POST': {
       'function': updateConfigData,
-      'method': 'POST',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -359,9 +381,10 @@ apicalls = {
         }
       ]
     },
-    'getConfigData': {
+  },
+  'configData': {
+    'GET': {
       'function': getConfigData,
-      'method': 'GET',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -371,9 +394,8 @@ apicalls = {
         }
       ]
     },
-    'deleteConfigData': {
+    'DELETE': {
       'function': deleteConfigData,
-      'method': 'DELETE',
       'args': [
         { 'name': 'user', 'gname': 'user', 'global': True, 'required': True },
         {
@@ -384,4 +406,4 @@ apicalls = {
       ]
     },
   }
-}
+} }

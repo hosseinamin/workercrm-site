@@ -34,11 +34,12 @@ def _readitem_for_mk(columns, item, appendix_id_tostr):
 
 def mk_readmulti_call(readmultifunc, appendix_id_tostr=True):
   def readmulti(**kwargs):
-    (columns, items) = readmultifunc(**kwargs)
+    (columns, items, count) = readmultifunc(**kwargs)
     return {
       "status": True,
       "records": [ _readitem_for_mk(columns, item, appendix_id_tostr) \
-                   for item in items ]
+                   for item in items ],
+      "count": count
     }
   return readmulti
   
@@ -66,9 +67,10 @@ def apiinit(request, version, name):
 _evalargs_truevalues = frozenset(('yes','true','1',''))
 
 def evalargs(apicall, request, version, name):
-  if apicall['method'] == 'GET' or apicall['method'] == 'DELETE':
+  method = request.method
+  if method == 'GET' or method == 'DELETE':
     query = request.GET if request.GET != None else {}
-  elif apicall['method'] == 'POST':
+  elif method == 'POST':
     query = request.POST if request.POST != None else {}
   else:
     query = None
@@ -110,6 +112,8 @@ def evalargs(apicall, request, version, name):
         val = int(query[name])
         if 'max' in arg and arg['max'] < val:
           val = arg['max']
+        if 'min' in arg and arg['min'] > val:
+          val = arg['min']
       except KeyError:
         if not keyerror_handle(arg):
           continue

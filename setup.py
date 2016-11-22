@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='workercrm_site',
-      version='1.0',
+      version='0.0.1',
       description='workercrm api made with django',
       url='',
       author='Hossein Amin',

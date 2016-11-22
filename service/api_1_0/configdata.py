@@ -26,7 +26,7 @@ def updateConfigData(user, id, data, inherits_id):
       iconfigdata = ConfigData.objects.get(owner=user, id=inherits_id)
       configdata.inherits = iconfigdata
   configdata.save()
-  return { 'status': True }
+  return { }
 
 def createConfigData(user, data, inherits_id):
   data = json.loads(data)
@@ -37,7 +37,7 @@ def createConfigData(user, data, inherits_id):
   else:
     configdata.inherits = None
   configdata.save()
-  return { 'status': True, 'id': str(configdata.id) }
+  return { 'id': str(configdata.id) }
 
 getConfigData = mk_readsingle_call( \
   lambda user, id: \
@@ -50,4 +50,4 @@ def deleteConfigData(user, id):
   # configdata inherits is experimental and there's no gc for it
   #if inherits != None:
   #  gcCheckAConfigData(inherits)
-  return { "status": True }
+  return { }

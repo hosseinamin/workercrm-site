@@ -21,7 +21,7 @@ def updateConfig(user, id, name, configdata):
       config.configdata = ConfigData(data=data, inherits=None)
     config.configdata.save()
   config.save()
-  return { 'status': True }
+  return { }
 
 def createConfig(user, name, configdata):
   # make new configdata
@@ -30,7 +30,7 @@ def createConfig(user, name, configdata):
   configdata.save()
   config = Config(owner=user, name=name, configdata=configdata)
   config.save()
-  return { 'status': True, 'id': str(config.id) }
+  return { 'id': str(config.id) }
 
 _ccdColumn = ({
   'name': "configdata",
@@ -38,12 +38,12 @@ _ccdColumn = ({
   'columns': configdataColumns
 },)
 
-getConfigs = mk_readmulti_call( \
-  lambda user, offset, limit, query: \
-    (configColumns, \
-     Config.objects.filter(owner=user)[offset:limit] \
+def _getConfigsFunc(user, offset, limit, query):
+  records = Config.objects.filter(owner=user) \
      if query == "" or query == None \
-     else Config.objects.filter(owner=user, name__istartswith=query)))
+     else Config.objects.filter(owner=user, name__icontains=query)
+  return (configColumns, records[offset:offset+limit], records.count())
+getConfigs = mk_readmulti_call(_getConfigsFunc)
 
 getConfig = mk_readsingle_call( \
   lambda user, id, with_configdata: \
@@ -55,4 +55,4 @@ def deleteConfig(user, id):
   configdata = config.configdata
   config.delete()
   gcCheckAConfigData(configdata)
-  return { "status": True }
+  return { }
