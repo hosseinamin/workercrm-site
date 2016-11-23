@@ -3,6 +3,9 @@ import json
 from ..apimod import ApiError, mk_readsingle_call, mk_readmulti_call
 from .configdata import configdataColumns, configdataRelatedKeys, \
   gcCheckAConfigData
+import operator
+from functools import reduce
+from django.db.models import Q
 
 configdataRelatedKeys.append("config_set")
 
@@ -41,7 +44,9 @@ _ccdColumn = ({
 def _getConfigsFunc(user, offset, limit, query):
   records = Config.objects.filter(owner=user) \
      if query == "" or query == None \
-     else Config.objects.filter(owner=user, name__icontains=query)
+     else Config.objects.filter(\
+              reduce(operator.and_, (Q(name__icontains=x) \
+                                     for x in query.split(" "))), owner=user)
   return (configColumns, records[offset:offset+limit], records.count())
 getConfigs = mk_readmulti_call(_getConfigsFunc)
 

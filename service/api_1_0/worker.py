@@ -5,6 +5,9 @@ from .configdata import configdataColumns, configdataRelatedKeys, \
   gcCheckAConfigData
 from .config import configColumns
 import json
+import operator
+from functools import reduce
+from django.db.models import Q
 
 configdataRelatedKeys.append("worker_set")
 
@@ -23,7 +26,9 @@ _wcdColumn = ({
 def _getWorkersFunc(user, offset, limit, query):
   records = Worker.objects.filter(owner=user) \
       if query == "" or query == None \
-      else Worker.objects.filter(owner=user, name__icontains=query)
+      else Worker.objects.filter(\
+              reduce(operator.and_, (Q(name__icontains=x) \
+                                     for x in query.split(" "))), owner=user)
   return (workerColumns, records[offset:offset+limit], records.count())
 getWorkers = mk_readmulti_call(_getWorkersFunc)
 getWorker = mk_readsingle_call( \
@@ -70,6 +75,7 @@ def updateWorker(user, id, **kwargs):
     if type(confdict) != dict:
       raise ValueError("configdata value(dict expected): %s" % confdict)
     worker.configdata.data = confdict
+    confdata = worker.configdata
     if baseconfig_changed:
       confdata.inherits = worker.baseconfig.configdata \
                           if worker.baseconfig != None else None
